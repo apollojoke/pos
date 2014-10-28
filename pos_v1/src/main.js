@@ -1,57 +1,113 @@
-//TODO: Please write code in this file.
-
-function Inventory(shoppingList){
-    this.shoppingList = shoppingList;
-    this.promotionList = generatePromotionsList(shoppingList);
-    this.printShoppingList = function(){
-        return '名称：雪碧，数量：5瓶，单价：3.00(元)，小计：12.00(元)\n' +
-            '名称：荔枝，数量：2斤，单价：15.00(元)，小计：30.00(元)\n' +
-            '名称：方便面，数量：3袋，单价：4.50(元)，小计：9.00(元)\n';
-    };
-    this.printPromotionList = function(){
-        return '名称：雪碧，数量：1瓶\n' + '名称：方便面，数量：1袋\n';
-    };
-    this.printSum = function(){
-        return '总计：51.00(元)\n';
-    };
-    this.printTotalSaved = function(){
-        return '节省：7.50(元)\n';
-    };
-}
-
-var parseShoppingList = function (inputs) {
+parseShoppingList = function (inputs) {
     var list = {};
     for(var i=0; i<=inputs.length-1; i++) {
-        var itemCode = inputs[i];
+        var barCode = inputs[i];
         var itemNum = 1;
         if (inputs[i].indexOf('-')>0){
-            itemCode = inputs[i].split('-')[0];
+            barCode = inputs[i].split('-')[0];
             itemNum = parseInt(inputs[i].split('-')[1]);
         }
 
-        if (list.hasOwnProperty(itemCode)) {
-            list[itemCode] += itemNum;
+        if (list.hasOwnProperty(barCode)) {
+            list[barCode] += itemNum;
         }
         else {
-            list[itemCode] = itemNum;
+            list[barCode] = itemNum;
         }
     }
     return list
 };
 
-var generatePromotionsList = function (shoppingList) {
+generatePromotionsList = function (shoppingList) {
     var promotions = loadPromotions();
-    for(var promotion in promotions){
-        //case
-
-
+    var promotionList = {};
+    for(var i=0; i<= promotions.length-1; i++){
+        if(promotions[i].hasOwnProperty('type')){
+            switch (promotions[i].type){
+                case 'BUY_TWO_GET_ONE_FREE':
+                    var barCodes = promotions[i].barcodes;
+                    for (var j=0; j<= barCodes.length-1; j++ ){
+                        if(shoppingList.hasOwnProperty(barCodes[j])){
+                            promotionList[barCodes[j]] = parseInt(shoppingList[barCodes[j]]/3);
+                        }
+                    }
+                    break;
+                //add other cases here
+                default :
+                    break;
+            }
+        }
     }
-    return null;
+    return promotionList;
 };
+
+function populateList(list) {
+    var items = {};
+    var allItems = loadAllItems();
+    for(var i in list ){
+        for(var j=0;j<= allItems.length-1; j++){
+            if(allItems[j].barcode === i){
+                items[i] = {
+                    name : allItems[j].name,
+                    unit: allItems[j].unit,
+                    price: allItems[j].price,
+                    number : list[i]
+                }
+            }
+        }
+    }
+    return items;
+}
+
+function Inventory(shoppingList){
+    this.shoppingList = populateList(shoppingList);
+    this.promotionList = populateList(generatePromotionsList(shoppingList));
+    this.totalPrice = 0;
+    this.totalSaved = 0;
+    this.printShoppingList = function(){
+        var message = '';
+        for(var barCode in this.shoppingList){
+            var payNumber;
+            if(this.promotionList.hasOwnProperty(barCode)){
+                payNumber = this.shoppingList[barCode].number - this.promotionList[barCode].number;
+                this.shoppingList[barCode].saved = (this.promotionList[barCode].number * this.shoppingList[barCode].price);
+            }
+            else{
+                payNumber = this.shoppingList[barCode].number;
+                this.shoppingList[barCode].saved = 0;
+            }
+            this.shoppingList[barCode].sum = (this.shoppingList[barCode].price * payNumber);
+            this.totalPrice += this.shoppingList[barCode].sum;
+            this.totalSaved += this.shoppingList[barCode].saved;
+            message +=
+                '名称：' + this.shoppingList[barCode].name +'，'+
+                '数量：' + this.shoppingList[barCode].number + this.shoppingList[barCode].unit + '，' +
+                '单价：' + this.shoppingList[barCode].price.toFixed(2) + '(元)，' +
+                '小计：' + this.shoppingList[barCode].sum.toFixed(2) + '(元)\n';
+        }
+        return message;
+    };
+    this.printPromotionList = function(){
+        var message='';
+        for(var barCode in this.promotionList){
+            message +=
+                '名称：' + this.promotionList[barCode].name + '，'+
+                '数量：' + this.promotionList[barCode].number +  this.promotionList[barCode].unit + '\n';
+        }
+        return message;
+    };
+    this.printSum = function(){
+        return '总计：'+ this.totalPrice.toFixed(2) + '(元)\n';
+    };
+    this.printTotalSaved = function(){
+        return '节省：' + this.totalSaved.toFixed(2) + '(元)\n';
+    };
+}
+
+
 
 var printInventory = function(inputs){
     var shoppingList = parseShoppingList(inputs);
-    var promotionList = generatePromotionsList(shoppingList);
     var inventory = new Inventory(shoppingList);
     console.log(
         '***<没钱赚商店>购物清单***\n' +
@@ -64,18 +120,4 @@ var printInventory = function(inputs){
         inventory.printTotalSaved() +
         '**********************'
     );
-
-
-//    '***<没钱赚商店>购物清单***\n' +
-//    '名称：雪碧，数量：5瓶，单价：3.00(元)，小计：12.00(元)\n' +
-//    '名称：荔枝，数量：2斤，单价：15.00(元)，小计：30.00(元)\n' +
-//    '名称：方便面，数量：3袋，单价：4.50(元)，小计：9.00(元)\n' +
-//    '----------------------\n' +
-//    '挥泪赠送商品：\n' +
-//    '名称：雪碧，数量：1瓶\n' +
-//    '名称：方便面，数量：1袋\n' +
-//    '----------------------\n' +
-//    '总计：51.00(元)\n' +
-//    '节省：7.50(元)\n' +
-//    '**********************';
 };
